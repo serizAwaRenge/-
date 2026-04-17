@@ -197,20 +197,38 @@
     function getUsers() { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
     function saveUsers(users) { localStorage.setItem(STORAGE_KEY, JSON.stringify(users)); }
 
-    function login(phone, password) {
-      const users = getUsers();
-      const user = users.find(u => u.phone === phone && u.password === password);
-      if (user) { currentUser = { ...user }; delete currentUser.password; return true; }
-      return false;
-    }
-
-    function register(userData) {
-      const users = getUsers();
-      if (users.find(u => u.phone === userData.phone)) return false;
-      users.push(userData);
-      saveUsers(users);
+   async function login(phone, password) {
+  try {
+    const response = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, password })
+    });
+    const result = await response.json();
+    if (result.success) {
+      currentUser = result.user;
       return true;
     }
+    return false;
+  } catch (error) {
+    alert('网络错误，无法连接服务器');
+    return false;
+  }
+}
+
+    async function register(userData) {
+  try {
+    const response = await fetch('/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(userData)
+    });
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    return { success: false, message: '网络错误，请稍后重试' };
+  }
+}
 
     function logout() {
       currentUser = null;
@@ -424,26 +442,38 @@
     document.getElementById('goToRegister').addEventListener('click', () => switchAuthTab('register'));
     document.getElementById('goToLogin').addEventListener('click', () => switchAuthTab('login'));
 
-    document.getElementById('loginBtn').addEventListener('click', () => {
-      const phone = document.getElementById('loginPhone').value.trim();
-      const pwd = document.getElementById('loginPassword').value;
-      if (login(phone, pwd)) showMainApp(); else alert('账号或密码错误');
-    });
-    document.getElementById('registerBtn').addEventListener('click', () => {
-      const role = document.getElementById('regRole').value;
-      const name = document.getElementById('regName').value.trim();
-      const gender = document.getElementById('regGender').value;
-      const phone = document.getElementById('regPhone').value.trim();
-      const pwd = document.getElementById('regPassword').value;
-      const age = document.getElementById('regAge').value;
-      const community = document.getElementById('regCommunity').value.trim();
-      if (!name || !phone || !pwd || !age || !community) return alert('请填写完整信息');
-      if (pwd.length < 6) return alert('密码至少6位');
-      const user = { phone, password: pwd, name, role, age: parseInt(age), community, gender };
-      if (register(user)) { alert('注册成功，请登录'); switchAuthTab('login'); } 
-      else { alert('手机号已被注册'); }
-    });
-  })();
+   document.getElementById('loginPassword').valudocument.getElementById('loginBtn').addEventListener('click', async () => {
+  const phone = document.getElementById('loginPhone').value.trim();
+  const pwd = document.getElementById('loginPassword').value;
+  const success = await login(phone, pwd);
+  if (success) {
+    showMainApp();
+  } else {
+    alert('账号或密码错误');
+  }
+});
+    document.getElementById('registerBtn').addEventListener('click', async () => {
+  const role = document.getElementById('regRole').value;
+  const name = document.getElementById('regName').value.trim();
+  const gender = document.getElementById('regGender').value;
+  const phone = document.getElementById('regPhone').value.trim();
+  const pwd = document.getElementById('regPassword').value;
+  const age = document.getElementById('regAge').value;
+  const community = document.getElementById('regCommunity').value.trim();
+  
+  if (!name || !phone || !pwd || !age || !community) return alert('请填写完整信息');
+  if (pwd.length < 6) return alert('密码至少6位');
+  
+  const user = { phone, password: pwd, name, role, age: parseInt(age), community, gender };
+  const result = await register(user);
+  
+  if (result.success) {
+    alert('注册成功，请登录');
+    switchAuthTab('login');
+  } else {
+    alert(result.message);
+  }
+});
 </script>
 </body>
 </html>
